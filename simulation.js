@@ -188,6 +188,19 @@ class AnalemmaSimulation {
     // Calculate the Equation of Time (in minutes)
     // This is the difference between apparent solar time and mean solar time
     getEquationOfTime(day) {
+        const components = this.getEOTComponents(day);
+        let eot = 0;
+        if (this.params.showEccentricityComponent) {
+            eot += components.eccentricity;
+        }
+        if (this.params.showTiltComponent) {
+            eot += components.obliquity;
+        }
+        return eot;
+    }
+
+    // Get the two EOT components separately (in minutes)
+    getEOTComponents(day) {
         const obliquity = this.toRad(this.params.tilt);
         const e = this.params.eccentricity;
 
@@ -198,27 +211,22 @@ class AnalemmaSimulation {
         const springEquinox = 80;
         const L = this.toRad(360 * (day - springEquinox) / 365);
 
-        // Equation of time has two components:
-
         // 1. Eccentricity effect (Earth moves faster near perihelion)
+        // This has ONE cycle per year
         const eccentricityEffect = -2 * e * Math.sin(M) - 1.25 * e * e * Math.sin(2 * M);
 
-        // 2. Obliquity effect (Sun appears to move at varying rate along ecliptic)
+        // 2. Obliquity effect (Sun's path on ecliptic projects variably onto equator)
+        // This has TWO cycles per year (peaks at solstices AND equinoxes)
         const y = Math.tan(obliquity / 2);
         const y2 = y * y;
         const obliquityEffect = y2 * Math.sin(2 * L) - 0.5 * y2 * y2 * Math.sin(4 * L);
 
-        // Combine effects (convert from radians to minutes)
+        // Convert from radians to minutes
         // 24 hours = 1440 minutes = 2π radians, so 1 radian = 1440/(2π) ≈ 229.18 minutes
-        let eot = 0;
-        if (this.params.showEccentricityComponent) {
-            eot += eccentricityEffect;
-        }
-        if (this.params.showTiltComponent) {
-            eot += obliquityEffect;
-        }
-
-        return eot * 229.18;
+        return {
+            eccentricity: eccentricityEffect * 229.18,
+            obliquity: obliquityEffect * 229.18
+        };
     }
 
     // Get the month and day from day of year
@@ -835,10 +843,53 @@ class AnalemmaSimulation {
             ctx.stroke();
         }
 
-        // Draw EOT curve
-        ctx.lineWidth = 2;
+        // Draw the two component curves (dashed, behind the main curve)
+        ctx.lineWidth = 1.5;
         ctx.lineCap = 'round';
+        ctx.setLineDash([4, 4]);
 
+        // Eccentricity component (red/orange) - ONE cycle per year
+        if (this.params.eccentricity > 0.001) {
+            for (let day = 0; day < 364; day++) {
+                const comp = this.getEOTComponents(day);
+                const nextComp = this.getEOTComponents(day + 1);
+
+                const x1 = padding.left + (day / 365) * graphWidth;
+                const y1 = padding.top + graphHeight / 2 - (comp.eccentricity / 20) * graphHeight;
+                const x2 = padding.left + ((day + 1) / 365) * graphWidth;
+                const y2 = padding.top + graphHeight / 2 - (nextComp.eccentricity / 20) * graphHeight;
+
+                ctx.strokeStyle = 'rgba(255, 107, 107, 0.5)';
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+        }
+
+        // Obliquity component (blue/cyan) - TWO cycles per year
+        if (this.params.tilt > 0.5) {
+            for (let day = 0; day < 364; day++) {
+                const comp = this.getEOTComponents(day);
+                const nextComp = this.getEOTComponents(day + 1);
+
+                const x1 = padding.left + (day / 365) * graphWidth;
+                const y1 = padding.top + graphHeight / 2 - (comp.obliquity / 20) * graphHeight;
+                const x2 = padding.left + ((day + 1) / 365) * graphWidth;
+                const y2 = padding.top + graphHeight / 2 - (nextComp.obliquity / 20) * graphHeight;
+
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.5)';
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+        }
+
+        ctx.setLineDash([]);
+
+        // Draw combined EOT curve (solid, on top)
+        ctx.lineWidth = 2.5;
         for (let day = 0; day < 364; day++) {
             const eot = this.getEquationOfTime(day);
             const nextEot = this.getEquationOfTime(day + 1);
@@ -848,7 +899,7 @@ class AnalemmaSimulation {
             const x2 = padding.left + ((day + 1) / 365) * graphWidth;
             const y2 = padding.top + graphHeight / 2 - (nextEot / 20) * graphHeight;
 
-            ctx.strokeStyle = this.getSeasonColor(day, 0.8);
+            ctx.strokeStyle = this.getSeasonColor(day, 0.9);
             ctx.beginPath();
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
@@ -876,11 +927,19 @@ class AnalemmaSimulation {
         ctx.arc(currentX, currentY, 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Labels
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        // Title and Legend
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText('Equation of Time', padding.left, 15);
+        ctx.fillText('Equation of Time (= deviation from average)', padding.left, 15);
+
+        // Component legend on the right
+        ctx.textAlign = 'right';
+        ctx.font = '9px sans-serif';
+        ctx.fillStyle = 'rgba(255, 107, 107, 0.8)';
+        ctx.fillText('--- Eccentricity (1 cycle/yr)', width - padding.right, 12);
+        ctx.fillStyle = 'rgba(100, 200, 255, 0.8)';
+        ctx.fillText('--- Obliquity (2 cycles/yr)', width - padding.right, 24);
     }
 
     // Get orbital speed relative to mean (1.0 = average)
@@ -896,39 +955,31 @@ class AnalemmaSimulation {
     // Generate insight text based on current position
     getInsightText(day, eot, speed) {
         const dateInfo = this.getDayMonth(day);
-        const speedPercent = ((speed - 1) * 100).toFixed(1);
-        const speedClass = speed > 1 ? 'fast' : 'slow';
-        const speedWord = speed > 1 ? 'faster' : 'slower';
+        const components = this.getEOTComponents(day);
         const eotClass = eot > 0 ? 'late' : 'early';
         const eotWord = eot > 0 ? 'late' : 'early';
 
-        // Determine which loop we're in
-        const decl = this.getSolarDeclination(day);
-        const inWinterLoop = decl < 0; // Southern declination = winter (N hemisphere)
-
-        // Check if near perihelion or aphelion
-        const daysSincePerihelion = (day - this.params.perihelionDay + 365) % 365;
-        const nearPerihelion = daysSincePerihelion < 30 || daysSincePerihelion > 335;
-        const nearAphelion = daysSincePerihelion > 152 && daysSincePerihelion < 212;
+        // Format component contributions
+        const eccSign = components.eccentricity >= 0 ? '+' : '';
+        const oblSign = components.obliquity >= 0 ? '+' : '';
 
         let insight = `<strong>${dateInfo.month} ${dateInfo.day}</strong>: `;
 
-        if (this.params.eccentricity < 0.005) {
-            insight += `With near-zero eccentricity, Earth's speed is constant and the Sun is neither early nor late due to orbital effects.`;
-        } else if (nearPerihelion) {
-            insight += `Earth is near <span class="fast">perihelion</span> — closest to the Sun and moving <span class="${speedClass}">${Math.abs(speedPercent)}% ${speedWord}</span> than average. `;
-            insight += `The Sun runs <span class="${eotClass}">${Math.abs(eot).toFixed(1)} min ${eotWord}</span> because Earth must rotate extra to "catch up."`;
-        } else if (nearAphelion) {
-            insight += `Earth is near <span class="slow">aphelion</span> — farthest from the Sun and moving <span class="${speedClass}">${Math.abs(speedPercent)}% ${speedWord}</span> than average. `;
-            insight += `The Sun runs <span class="${eotClass}">${Math.abs(eot).toFixed(1)} min ${eotWord}</span> because Earth doesn't need to rotate as far.`;
-        } else {
-            insight += `Earth is moving <span class="${speedClass}">${Math.abs(speedPercent)}% ${speedWord}</span> than average. `;
-            insight += `The Sun runs <span class="${eotClass}">${Math.abs(eot).toFixed(1)} min ${eotWord}</span>. `;
-            if (inWinterLoop) {
-                insight += `We're in the <strong>winter loop</strong> — larger because perihelion (fastest speed) occurs in winter.`;
-            } else {
-                insight += `We're in the <strong>summer loop</strong> — smaller because aphelion (slowest speed) occurs in summer.`;
-            }
+        // Show both components
+        insight += `Two effects combine → Sun is <span class="${eotClass}">${Math.abs(eot).toFixed(1)} min ${eotWord}</span> (relative to average). `;
+
+        // Explain the components
+        insight += `<br><small style="color:#aaa;">`;
+        insight += `<span style="color:rgba(255,107,107,0.9);">Orbital speed: ${eccSign}${components.eccentricity.toFixed(1)}m</span>`;
+        insight += ` + `;
+        insight += `<span style="color:rgba(100,200,255,0.9);">Tilt effect: ${oblSign}${components.obliquity.toFixed(1)}m</span>`;
+        insight += `</small>`;
+
+        // Add contextual explanation
+        if (Math.abs(components.eccentricity) > 5 && Math.sign(components.eccentricity) !== Math.sign(components.obliquity)) {
+            insight += `<br><em style="color:#888;">The two effects are opposing each other right now.</em>`;
+        } else if (Math.abs(components.eccentricity) > 5 && Math.sign(components.eccentricity) === Math.sign(components.obliquity)) {
+            insight += `<br><em style="color:#888;">Both effects reinforce each other, making the Sun extra ${eotWord}.</em>`;
         }
 
         return insight;
