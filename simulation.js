@@ -346,18 +346,100 @@ class AnalemmaSimulation {
         ctx.lineTo(width, centerY);
         ctx.stroke();
 
-        // Draw axis labels
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        // Draw axis labels with color coding
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('← Sun Early | Sun Late →', centerX, height - 30);
+
+        // Sun Early label (left side - blue)
+        ctx.fillStyle = 'rgba(84, 160, 255, 0.9)';
+        ctx.fillText('← Sun Early', centerX - 70, height - 30);
+
+        // Separator
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillText('|', centerX, height - 30);
+
+        // Sun Late label (right side - orange)
+        ctx.fillStyle = 'rgba(255, 159, 67, 0.9)';
+        ctx.fillText('Sun Late →', centerX + 70, height - 30);
 
         ctx.save();
         ctx.translate(width - 25, centerY);
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.fillText('← South | North →', 0, 0);
         ctx.restore();
+
+        // Draw "WHY" annotations on the analemma
+        if (this.params.eccentricity > 0.005 && this.params.showEccentricityComponent) {
+            ctx.font = '10px sans-serif';
+
+            // Find the rightmost point (Sun most late - near perihelion)
+            let maxEot = -Infinity, maxEotDay = 0;
+            let minEot = Infinity, minEotDay = 0;
+            for (let d = 0; d < 365; d++) {
+                const e = this.getEquationOfTime(d);
+                if (e > maxEot) { maxEot = e; maxEotDay = d; }
+                if (e < minEot) { minEot = e; minEotDay = d; }
+            }
+
+            // Annotation for "Sun Late" (right side)
+            const lateDecl = this.params.showTiltComponent ? this.getSolarDeclination(maxEotDay) : 0;
+            const lateX = centerX + maxEot * scaleX;
+            const lateY = centerY - lateDecl * scaleY;
+
+            ctx.fillStyle = 'rgba(255, 159, 67, 0.8)';
+            ctx.textAlign = 'left';
+            const lateInfo = this.getDayMonth(maxEotDay);
+            ctx.fillText(`${lateInfo.month}: Earth moving fast`, lateX + 15, lateY - 10);
+            ctx.fillText(`→ extra rotation needed`, lateX + 15, lateY + 5);
+
+            // Draw connector line
+            ctx.strokeStyle = 'rgba(255, 159, 67, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(lateX + 5, lateY);
+            ctx.lineTo(lateX + 13, lateY - 5);
+            ctx.stroke();
+
+            // Annotation for "Sun Early" (left side)
+            const earlyDecl = this.params.showTiltComponent ? this.getSolarDeclination(minEotDay) : 0;
+            const earlyX = centerX + minEot * scaleX;
+            const earlyY = centerY - earlyDecl * scaleY;
+
+            ctx.fillStyle = 'rgba(84, 160, 255, 0.8)';
+            ctx.textAlign = 'right';
+            const earlyInfo = this.getDayMonth(minEotDay);
+            ctx.fillText(`${earlyInfo.month}: Earth moving slow`, earlyX - 15, earlyY - 10);
+            ctx.fillText(`← less rotation needed`, earlyX - 15, earlyY + 5);
+
+            // Draw connector line
+            ctx.strokeStyle = 'rgba(84, 160, 255, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(earlyX - 5, earlyY);
+            ctx.lineTo(earlyX - 13, earlyY - 5);
+            ctx.stroke();
+        }
+
+        // Draw loop size annotations if tilt is significant
+        if (this.params.tilt > 5 && this.params.showTiltComponent && this.params.eccentricity > 0.005) {
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+
+            // Winter loop label (bottom)
+            ctx.fillStyle = 'rgba(74, 158, 255, 0.7)';
+            const winterY = centerY + 20 * scaleY;
+            ctx.fillText('WINTER LOOP', centerX + 30, winterY);
+            ctx.font = '9px sans-serif';
+            ctx.fillText('(larger: Earth fastest here)', centerX + 30, winterY + 14);
+
+            // Summer loop label (top)
+            ctx.fillStyle = 'rgba(255, 170, 0, 0.7)';
+            ctx.font = '11px sans-serif';
+            const summerY = centerY - 20 * scaleY;
+            ctx.fillText('SUMMER LOOP', centerX - 30, summerY);
+            ctx.font = '9px sans-serif';
+            ctx.fillText('(smaller: Earth slowest here)', centerX - 30, summerY + 14);
+        }
 
         // Draw the full analemma trail
         ctx.lineWidth = 3;
@@ -598,30 +680,101 @@ class AnalemmaSimulation {
             ctx.fill();
         }
 
-        // Draw perihelion/aphelion markers
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        // Draw perihelion/aphelion markers with speed info
         ctx.font = '10px sans-serif';
 
-        // Perihelion (closest to Sun) - on the right
+        // Perihelion (closest to Sun) - on the left of orbit
         const periX = sunX - orbitRadius * (1 - e);
-        ctx.fillText('Perihelion', periX - 40, centerY + 15);
+        const periSpeed = this.getOrbitalSpeed(this.params.perihelionDay);
+        const periSpeedPct = ((periSpeed - 1) * 100).toFixed(1);
+
+        ctx.fillStyle = 'rgba(255, 107, 107, 0.9)';
+        ctx.textAlign = 'center';
+        ctx.fillText('PERIHELION', periX, centerY - 25);
+        ctx.font = '9px sans-serif';
+        ctx.fillText('Closest to Sun', periX, centerY - 12);
+        ctx.fillStyle = 'rgba(255, 107, 107, 1)';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(`Speed: +${periSpeedPct}%`, periX, centerY + 25);
+        ctx.font = '9px sans-serif';
+        ctx.fillStyle = 'rgba(255, 159, 67, 0.8)';
+        ctx.fillText('→ Sun runs LATE', periX, centerY + 38);
+
+        ctx.fillStyle = 'rgba(255, 107, 107, 0.8)';
         ctx.beginPath();
-        ctx.arc(periX, centerY, 4, 0, Math.PI * 2);
+        ctx.arc(periX, centerY, 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Aphelion (farthest from Sun) - on the left
+        // Aphelion (farthest from Sun) - on the right of orbit
         const apX = sunX + orbitRadius * (1 + e);
-        ctx.fillText('Aphelion', apX + 10, centerY + 15);
+        const apDay = (this.params.perihelionDay + 182) % 365;
+        const apSpeed = this.getOrbitalSpeed(apDay);
+        const apSpeedPct = ((apSpeed - 1) * 100).toFixed(1);
+
+        ctx.fillStyle = 'rgba(107, 255, 107, 0.9)';
+        ctx.textAlign = 'center';
+        ctx.fillText('APHELION', apX, centerY - 25);
+        ctx.font = '9px sans-serif';
+        ctx.fillText('Farthest from Sun', apX, centerY - 12);
+        ctx.fillStyle = 'rgba(107, 255, 107, 1)';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(`Speed: ${apSpeedPct}%`, apX, centerY + 25);
+        ctx.font = '9px sans-serif';
+        ctx.fillStyle = 'rgba(84, 160, 255, 0.8)';
+        ctx.fillText('→ Sun runs EARLY', apX, centerY + 38);
+
+        ctx.fillStyle = 'rgba(107, 255, 107, 0.8)';
         ctx.beginPath();
-        ctx.arc(apX, centerY, 4, 0, Math.PI * 2);
+        ctx.arc(apX, centerY, 6, 0, Math.PI * 2);
         ctx.fill();
+
+        // Draw speed gradient on orbit path
+        if (this.params.eccentricity > 0.005) {
+            ctx.lineWidth = 4;
+            for (let d = 0; d < 365; d += 2) {
+                const meanAnomaly = this.getMeanAnomaly(d);
+                const trueAnomaly = this.getTrueAnomaly(meanAnomaly);
+                const angle = trueAnomaly + Math.PI;
+                const r = orbitRadius * (1 - e * e) / (1 + e * Math.cos(trueAnomaly));
+
+                const x = sunX + r * Math.cos(angle);
+                const y = sunY + r * Math.sin(angle);
+
+                const nextD = (d + 2) % 365;
+                const nextMA = this.getMeanAnomaly(nextD);
+                const nextTA = this.getTrueAnomaly(nextMA);
+                const nextAngle = nextTA + Math.PI;
+                const nextR = orbitRadius * (1 - e * e) / (1 + e * Math.cos(nextTA));
+                const nextX = sunX + nextR * Math.cos(nextAngle);
+                const nextY = sunY + nextR * Math.sin(nextAngle);
+
+                // Color by speed
+                const speed = this.getOrbitalSpeed(d);
+                const speedNorm = (speed - (1 - e)) / (2 * e); // 0 to 1
+                const r_col = Math.floor(107 + 148 * speedNorm);
+                const g_col = Math.floor(255 - 148 * speedNorm);
+                ctx.strokeStyle = `rgba(${r_col}, ${g_col}, 107, 0.4)`;
+
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(nextX, nextY);
+                ctx.stroke();
+            }
+        }
 
         // Legend
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText('Top-down view of Earth\'s orbit', 15, 25);
-        ctx.fillText('(Not to scale)', 15, 40);
+
+        if (this.params.eccentricity > 0.005) {
+            ctx.font = '10px sans-serif';
+            ctx.fillStyle = 'rgba(255, 107, 107, 0.8)';
+            ctx.fillText('● Fast (near Sun)', 15, 45);
+            ctx.fillStyle = 'rgba(107, 255, 107, 0.8)';
+            ctx.fillText('● Slow (far from Sun)', 15, 60);
+        }
     }
 
     // Draw the equation of time graph
@@ -730,17 +883,76 @@ class AnalemmaSimulation {
         ctx.fillText('Equation of Time', padding.left, 15);
     }
 
+    // Get orbital speed relative to mean (1.0 = average)
+    getOrbitalSpeed(day) {
+        const meanAnomaly = this.getMeanAnomaly(day);
+        const trueAnomaly = this.getTrueAnomaly(meanAnomaly);
+        const e = this.params.eccentricity;
+        // Speed is inversely related to distance squared (Kepler's 2nd law)
+        // v ∝ (1 + e*cos(trueAnomaly))
+        return 1 + e * Math.cos(trueAnomaly);
+    }
+
+    // Generate insight text based on current position
+    getInsightText(day, eot, speed) {
+        const dateInfo = this.getDayMonth(day);
+        const speedPercent = ((speed - 1) * 100).toFixed(1);
+        const speedClass = speed > 1 ? 'fast' : 'slow';
+        const speedWord = speed > 1 ? 'faster' : 'slower';
+        const eotClass = eot > 0 ? 'late' : 'early';
+        const eotWord = eot > 0 ? 'late' : 'early';
+
+        // Determine which loop we're in
+        const decl = this.getSolarDeclination(day);
+        const inWinterLoop = decl < 0; // Southern declination = winter (N hemisphere)
+
+        // Check if near perihelion or aphelion
+        const daysSincePerihelion = (day - this.params.perihelionDay + 365) % 365;
+        const nearPerihelion = daysSincePerihelion < 30 || daysSincePerihelion > 335;
+        const nearAphelion = daysSincePerihelion > 152 && daysSincePerihelion < 212;
+
+        let insight = `<strong>${dateInfo.month} ${dateInfo.day}</strong>: `;
+
+        if (this.params.eccentricity < 0.005) {
+            insight += `With near-zero eccentricity, Earth's speed is constant and the Sun is neither early nor late due to orbital effects.`;
+        } else if (nearPerihelion) {
+            insight += `Earth is near <span class="fast">perihelion</span> — closest to the Sun and moving <span class="${speedClass}">${Math.abs(speedPercent)}% ${speedWord}</span> than average. `;
+            insight += `The Sun runs <span class="${eotClass}">${Math.abs(eot).toFixed(1)} min ${eotWord}</span> because Earth must rotate extra to "catch up."`;
+        } else if (nearAphelion) {
+            insight += `Earth is near <span class="slow">aphelion</span> — farthest from the Sun and moving <span class="${speedClass}">${Math.abs(speedPercent)}% ${speedWord}</span> than average. `;
+            insight += `The Sun runs <span class="${eotClass}">${Math.abs(eot).toFixed(1)} min ${eotWord}</span> because Earth doesn't need to rotate as far.`;
+        } else {
+            insight += `Earth is moving <span class="${speedClass}">${Math.abs(speedPercent)}% ${speedWord}</span> than average. `;
+            insight += `The Sun runs <span class="${eotClass}">${Math.abs(eot).toFixed(1)} min ${eotWord}</span>. `;
+            if (inWinterLoop) {
+                insight += `We're in the <strong>winter loop</strong> — larger because perihelion (fastest speed) occurs in winter.`;
+            } else {
+                insight += `We're in the <strong>summer loop</strong> — smaller because aphelion (slowest speed) occurs in summer.`;
+            }
+        }
+
+        return insight;
+    }
+
     // Update info displays
     updateInfo() {
         const dateInfo = this.getDayMonth(this.params.currentDay);
         document.getElementById('currentDate').textContent = dateInfo.month + ' ' + dateInfo.day;
 
-        const declination = this.getSolarDeclination(this.params.currentDay);
-        document.getElementById('declination').textContent = declination.toFixed(1) + '°';
+        const speed = this.getOrbitalSpeed(this.params.currentDay);
+        const speedPercent = ((speed - 1) * 100);
+        const speedText = speedPercent > 0 ? `+${speedPercent.toFixed(1)}%` : `${speedPercent.toFixed(1)}%`;
+        const speedElement = document.getElementById('orbitalSpeed');
+        speedElement.textContent = speedText;
+        speedElement.style.color = speedPercent > 0 ? '#ff6b6b' : '#6bff6b';
 
         const eot = this.getEquationOfTime(this.params.currentDay);
         const eotSign = eot >= 0 ? '+' : '';
         document.getElementById('eot').textContent = eotSign + eot.toFixed(1) + ' min';
+
+        // Update insight panel
+        const insightText = this.getInsightText(this.params.currentDay, eot, speed);
+        document.getElementById('insightText').innerHTML = insightText;
 
         // Update day slider
         document.getElementById('daySlider').value = this.params.currentDay;
