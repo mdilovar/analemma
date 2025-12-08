@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analemma Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a0a2e 50%, #0d0d0d 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255, 200, 100, 0.3);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #888;
+            font-weight: 300;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .visualization-panel {
+            background: rgba(20, 20, 40, 0.6);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #888;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #ffa500;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ffa500;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+            background: radial-gradient(ellipse at center, #0a0a1a 0%, #000008 100%);
+        }
+
+        .controls-section {
+            background: rgba(20, 20, 40, 0.6);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .control-group {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+        }
+
+        .control-group h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #aaa;
+            margin-bottom: 15px;
+        }
+
+        .slider-control {
+            margin-bottom: 18px;
+        }
+
+        .slider-control:last-child {
+            margin-bottom: 0;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .slider-label {
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        .slider-value {
+            font-size: 0.85rem;
+            color: #ffa500;
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: rgba(255, 165, 0, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 165, 0, 0.5);
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 15px rgba(255, 165, 0, 0.5);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 165, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 3px solid #ffa500;
+        }
+
+        .info-card h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .info-card .value {
+            font-size: 1.3rem;
+            color: #fff;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .explanation {
+            margin-top: 30px;
+            padding: 25px;
+            background: rgba(20, 20, 40, 0.6);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .explanation h2 {
+            font-size: 1.2rem;
+            color: #ffa500;
+            margin-bottom: 15px;
+            font-weight: 400;
+        }
+
+        .explanation p {
+            line-height: 1.8;
+            color: #bbb;
+            margin-bottom: 12px;
+        }
+
+        .factor-highlight {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .tilt-factor {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+        }
+
+        .eccentricity-factor {
+            background: rgba(255, 100, 100, 0.2);
+            color: #ff6464;
+        }
+
+        .equation-time-display {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+        }
+
+        .equation-time-display h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #888;
+            margin-bottom: 15px;
+        }
+
+        #eotCanvas {
+            background: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ANALEMMA</h1>
+            <p class="subtitle">Interactive simulation of the Sun's path through the sky</p>
+        </header>
+
+        <div class="main-content">
+            <div class="visualization-panel">
+                <div class="panel-title">Analemma Pattern</div>
+                <canvas id="analemmaCanvas" width="600" height="600"></canvas>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: #4a9eff;"></div>Winter</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #4aff4a;"></div>Spring</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #ffaa00;"></div>Summer</div>
+                    <div class="legend-item"><div class="legend-color" style="background: #ff4a4a;"></div>Autumn</div>
+                </div>
+            </div>
+
+            <div class="visualization-panel">
+                <div class="panel-title">Earth's Orbit (Top View)</div>
+                <canvas id="orbitCanvas" width="600" height="600"></canvas>
+                <div class="info-cards">
+                    <div class="info-card">
+                        <h4>Current Date</h4>
+                        <div class="value" id="currentDate">Jan 1</div>
+                    </div>
+                    <div class="info-card">
+                        <h4>Sun Declination</h4>
+                        <div class="value" id="declination">0.0°</div>
+                    </div>
+                    <div class="info-card">
+                        <h4>Equation of Time</h4>
+                        <div class="value" id="eot">0.0 min</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-section">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <h3>Orbital Parameters</h3>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Axial Tilt (Obliquity)</span>
+                            <span class="slider-value" id="tiltValue">23.4°</span>
+                        </div>
+                        <input type="range" id="tiltSlider" min="0" max="45" step="0.1" value="23.4">
+                    </div>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Orbital Eccentricity</span>
+                            <span class="slider-value" id="eccentricityValue">0.017</span>
+                        </div>
+                        <input type="range" id="eccentricitySlider" min="0" max="0.2" step="0.001" value="0.017">
+                    </div>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Perihelion Day</span>
+                            <span class="slider-value" id="perihelionValue">Day 3</span>
+                        </div>
+                        <input type="range" id="perihelionSlider" min="0" max="365" step="1" value="3">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Animation</h3>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Speed</span>
+                            <span class="slider-value" id="speedValue">1x</span>
+                        </div>
+                        <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1">
+                    </div>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Day of Year</span>
+                            <span class="slider-value" id="dayValue">1</span>
+                        </div>
+                        <input type="range" id="daySlider" min="0" max="365" step="1" value="0">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-primary" id="playPauseBtn">Pause</button>
+                        <button class="btn-secondary" id="resetBtn">Reset</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Visualization</h3>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Show Components</span>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer;">
+                            <input type="checkbox" id="showTiltComponent" checked style="width: 18px; height: 18px;">
+                            <span style="color: #64c8ff;">Tilt component (↕)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer;">
+                            <input type="checkbox" id="showEccentricityComponent" checked style="width: 18px; height: 18px;">
+                            <span style="color: #ff6464;">Eccentricity component (↔)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="equation-time-display">
+                <h3>Equation of Time Throughout the Year</h3>
+                <canvas id="eotCanvas" width="800" height="150"></canvas>
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h2>Understanding the Analemma</h2>
+            <p>
+                The analemma is the figure-8 pattern traced by the Sun in the sky when photographed at the same time
+                each day over a year. This shape emerges from two key factors:
+            </p>
+            <p>
+                <span class="factor-highlight tilt-factor">Earth's Axial Tilt (23.4°)</span> causes the Sun's
+                north-south movement in the sky throughout the year. This creates the vertical extent of the analemma,
+                with the Sun highest in summer and lowest in winter.
+            </p>
+            <p>
+                <span class="factor-highlight eccentricity-factor">Orbital Eccentricity (0.017)</span> combined with
+                the tilt causes the "Equation of Time" - the difference between clock time and sundial time. Earth
+                moves faster at perihelion (closest to Sun, ~January) and slower at aphelion (farthest, ~July),
+                causing the east-west asymmetry.
+            </p>
+            <p>
+                Try adjusting the sliders to see how each factor affects the shape! Set eccentricity to 0 for a
+                symmetric figure-8, or set tilt to 0 for just a horizontal line showing the equation of time effect.
+            </p>
+        </div>
+    </div>
+
+    <script src="simulation.js"></script>
+</body>
+</html>
