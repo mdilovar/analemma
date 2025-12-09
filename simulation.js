@@ -378,7 +378,88 @@ class AnalemmaSimulation {
         ctx.fillText('← South | North →', 0, 0);
         ctx.restore();
 
-        // Draw "WHY" annotations on the analemma
+        // Draw motion direction arrows at key points to show WHY tilt creates E-W variation
+        // This is the key visual: at solstices motion is horizontal, at equinoxes it's diagonal
+        if (this.params.tilt > 5 && this.params.showTiltComponent) {
+            const arrowLen = 25;
+
+            // Helper to draw an arrow
+            const drawArrow = (x, y, angle, color, label, labelPos) => {
+                const endX = x + arrowLen * Math.cos(angle);
+                const endY = y + arrowLen * Math.sin(angle);
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+
+                // Arrowhead
+                const headLen = 6;
+                ctx.beginPath();
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(endX - headLen * Math.cos(angle - 0.4), endY - headLen * Math.sin(angle - 0.4));
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(endX - headLen * Math.cos(angle + 0.4), endY - headLen * Math.sin(angle + 0.4));
+                ctx.stroke();
+
+                // Label
+                if (label) {
+                    ctx.fillStyle = color;
+                    ctx.font = '9px sans-serif';
+                    ctx.textAlign = labelPos === 'left' ? 'right' : 'left';
+                    const labelX = labelPos === 'left' ? x - 8 : x + arrowLen + 8;
+                    ctx.fillText(label, labelX, y + 3);
+                }
+            };
+
+            // Summer solstice (top of analemma) - motion parallel to equator (horizontal arrow)
+            const summerDay = 172; // ~June 21
+            const summerEot = this.getEquationOfTime(summerDay);
+            const summerDecl = this.getSolarDeclination(summerDay);
+            const summerX = centerX + summerEot * scaleX;
+            const summerY = centerY - summerDecl * scaleY;
+            drawArrow(summerX - arrowLen/2, summerY, 0, 'rgba(255, 200, 100, 0.8)', 'E-W only', 'right');
+
+            // Winter solstice (bottom) - also horizontal
+            const winterDay = 355; // ~Dec 21
+            const winterEot = this.getEquationOfTime(winterDay);
+            const winterDecl = this.getSolarDeclination(winterDay);
+            const winterX = centerX + winterEot * scaleX;
+            const winterY = centerY - winterDecl * scaleY;
+            drawArrow(winterX - arrowLen/2, winterY, 0, 'rgba(100, 180, 255, 0.8)', 'E-W only', 'right');
+
+            // Spring equinox - motion at an angle (diagonal arrow)
+            const springDay = 80; // ~March 21
+            const springEot = this.getEquationOfTime(springDay);
+            const springDecl = this.getSolarDeclination(springDay);
+            const springX = centerX + springEot * scaleX;
+            const springY = centerY - springDecl * scaleY;
+            // Arrow going up-right (NE direction) to show motion split between N and E
+            drawArrow(springX, springY, -Math.PI/4, 'rgba(150, 255, 150, 0.8)', 'N + E', 'right');
+
+            // Fall equinox - also diagonal but going down
+            const fallDay = 266; // ~Sept 23
+            const fallEot = this.getEquationOfTime(fallDay);
+            const fallDecl = this.getSolarDeclination(fallDay);
+            const fallX = centerX + fallEot * scaleX;
+            const fallY = centerY - fallDecl * scaleY;
+            // Arrow going down-right (SE direction)
+            drawArrow(fallX, fallY, Math.PI/4, 'rgba(255, 150, 150, 0.8)', 'S + E', 'right');
+
+            // Add a mini legend for the arrows when eccentricity is low
+            if (this.params.eccentricity <= 0.005) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('Arrows show Sun\'s motion direction:', 10, 20);
+                ctx.fillText('→ Horizontal = all E-W = Sun late', 10, 34);
+                ctx.fillText('↗ Diagonal = some N-S = Sun early', 10, 48);
+            }
+        }
+
+        // Draw "WHY" annotations on the analemma (for eccentricity effect)
         if (this.params.eccentricity > 0.005 && this.params.showEccentricityComponent) {
             ctx.font = '10px sans-serif';
 
@@ -429,24 +510,28 @@ class AnalemmaSimulation {
         }
 
         // Draw loop size annotations if tilt is significant
-        if (this.params.tilt > 5 && this.params.showTiltComponent && this.params.eccentricity > 0.005) {
+        if (this.params.tilt > 5 && this.params.showTiltComponent) {
             ctx.font = '11px sans-serif';
             ctx.textAlign = 'center';
 
             // Winter loop label (bottom)
             ctx.fillStyle = 'rgba(74, 158, 255, 0.7)';
             const winterY = centerY + 20 * scaleY;
-            ctx.fillText('WINTER LOOP', centerX + 30, winterY);
-            ctx.font = '9px sans-serif';
-            ctx.fillText('(larger: Earth fastest here)', centerX + 30, winterY + 14);
+            ctx.fillText('WINTER', centerX + 50, winterY);
 
             // Summer loop label (top)
             ctx.fillStyle = 'rgba(255, 170, 0, 0.7)';
-            ctx.font = '11px sans-serif';
             const summerY = centerY - 20 * scaleY;
-            ctx.fillText('SUMMER LOOP', centerX - 30, summerY);
-            ctx.font = '9px sans-serif';
-            ctx.fillText('(smaller: Earth slowest here)', centerX - 30, summerY + 14);
+            ctx.fillText('SUMMER', centerX - 50, summerY);
+
+            // Only show size explanation if eccentricity is significant
+            if (this.params.eccentricity > 0.005) {
+                ctx.font = '9px sans-serif';
+                ctx.fillStyle = 'rgba(74, 158, 255, 0.6)';
+                ctx.fillText('(larger: fastest here)', centerX + 50, winterY + 13);
+                ctx.fillStyle = 'rgba(255, 170, 0, 0.6)';
+                ctx.fillText('(smaller: slowest here)', centerX - 50, summerY + 13);
+            }
         }
 
         // Draw the full analemma trail
