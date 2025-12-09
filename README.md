@@ -2,6 +2,8 @@
 
 An interactive visualization that helps build intuition about why the analemma - the figure-8 pattern traced by the Sun in the sky - has its characteristic shape.
 
+https://mdilovar.github.io/analemma/
+
 ## What is the Analemma?
 
 If you photograph the Sun at the same clock time every day for a year, it traces a figure-8 pattern in the sky called the **analemma**. This shape emerges from two key factors:
