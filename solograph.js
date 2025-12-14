@@ -39,7 +39,9 @@ class Solograph {
             this.hourTraces[hour] = [];
             for (let day = 1; day <= 365; day++) {
                 const declination = this.getDeclination(day);
-                const hourAngle = hour - 12;
+                const eot = this.getEquationOfTime(day); // EOT in hours
+                // The sun's actual hour angle includes the equation of time shift
+                const hourAngle = (hour + eot) - 12;
                 const pos = this.equatorialToHorizontal(hourAngle, declination, this.latitude);
                 this.hourTraces[hour].push({
                     day,
@@ -48,6 +50,32 @@ class Solograph {
                 });
             }
         }
+    }
+
+    // Get equation of time in hours for a given day
+    getEquationOfTime(day) {
+        const obliquity = this.toRad(this.tilt);
+        const e = 0.0167; // Earth's orbital eccentricity
+        const perihelionDay = 3;
+
+        // Mean anomaly
+        const daysFromPerihelion = (day - perihelionDay + 365) % 365;
+        const M = this.toRad(360 * daysFromPerihelion / 365);
+
+        // Ecliptic longitude
+        const springEquinox = 80;
+        const L = this.toRad(360 * (day - springEquinox) / 365);
+
+        // Eccentricity effect
+        const eccentricityEffect = -2 * e * Math.sin(M) - 1.25 * e * e * Math.sin(2 * M);
+
+        // Obliquity effect
+        const y = Math.tan(obliquity / 2);
+        const y2 = y * y;
+        const obliquityEffect = y2 * Math.sin(2 * L) - 0.5 * y2 * y2 * Math.sin(4 * L);
+
+        // Convert from radians to hours (24 hours = 2π radians)
+        return (eccentricityEffect + obliquityEffect) * 24 / (2 * Math.PI);
     }
 
     setupCanvas() {
@@ -395,22 +423,16 @@ class Solograph {
             }
             ctx.stroke();
 
-            // Draw hour label at the current day's position
+            // Draw dot at the current day's position on each analemma
             const currentPoint = trace[currentDay - 1];
-            if (currentPoint && currentPoint.altitude > 5) {
+            if (currentPoint && currentPoint.altitude > 2) {
                 const labelPos = this.skyToCanvas(currentPoint.altitude, currentPoint.azimuth);
 
                 // Small dot at current position
                 ctx.beginPath();
-                ctx.arc(labelPos.x, labelPos.y, 4, 0, Math.PI * 2);
+                ctx.arc(labelPos.x, labelPos.y, 3, 0, Math.PI * 2);
                 ctx.fillStyle = color;
                 ctx.fill();
-
-                // Hour label
-                ctx.font = 'bold 9px sans-serif';
-                ctx.fillStyle = '#fff';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${hour}h`, labelPos.x, labelPos.y - 8);
             }
         }
         ctx.textAlign = 'left';
@@ -554,7 +576,7 @@ class Solograph {
         ctx.font = 'bold 14px sans-serif';
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'left';
-        ctx.fillText(this.getDayName(this.dayOfYear), 20, 32);
+        ctx.fillText(this.getDayName(Math.round(this.dayOfYear)), 20, 32);
     }
 
     startAnimation() {
