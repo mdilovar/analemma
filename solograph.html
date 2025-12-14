@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solograph - Daily Sun Path</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a0a2e 50%, #0d0d0d 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 15px 0;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255, 200, 100, 0.3);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #888;
+            font-weight: 300;
+        }
+
+        .app-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .controls-panel {
+            background: rgba(20, 20, 40, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            height: fit-content;
+        }
+
+        .control-group {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-group h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #aaa;
+            margin-bottom: 12px;
+        }
+
+        .slider-control {
+            margin-bottom: 14px;
+        }
+
+        .slider-control:last-child {
+            margin-bottom: 0;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .slider-label {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+
+        .slider-value {
+            font-size: 0.75rem;
+            color: #ffa500;
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: rgba(255, 165, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 165, 0, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 15px rgba(255, 165, 0, 0.5);
+        }
+
+        .checkbox-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .checkbox-control input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 165, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .visualization-panel {
+            background: rgba(20, 20, 40, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #888;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #ffa500;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #ffa500;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 500px;
+            border-radius: 6px;
+            background: radial-gradient(ellipse at center bottom, #0a0a1a 0%, #000008 100%);
+        }
+
+        .info-box {
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        @media (max-width: 700px) {
+            .info-box {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-item label {
+            display: block;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .info-item span {
+            font-size: 1rem;
+            color: #fff;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .nav-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            color: #888;
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffa500;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 12px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .preset-btn {
+            padding: 6px 8px;
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #aaa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255, 165, 0, 0.2);
+            border-color: rgba(255, 165, 0, 0.5);
+            color: #ffa500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SOLOGRAPH</h1>
+            <p class="subtitle">Sun's path across the sky throughout the day</p>
+        </header>
+
+        <div class="app-layout">
+            <div class="controls-panel">
+                <div class="control-group">
+                    <h3>Location & Date</h3>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Latitude</span>
+                            <span class="slider-value" id="latitudeValue">40°N</span>
+                        </div>
+                        <input type="range" id="latitudeSlider" min="-66" max="66" step="1" value="40">
+                    </div>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Day of Year</span>
+                            <span class="slider-value" id="dayValue">Jun 21</span>
+                        </div>
+                        <input type="range" id="daySlider" min="1" max="365" step="1" value="172">
+                    </div>
+                    <div class="preset-buttons">
+                        <button class="preset-btn" data-day="172">Summer Solstice</button>
+                        <button class="preset-btn" data-day="355">Winter Solstice</button>
+                        <button class="preset-btn" data-day="80">Spring Equinox</button>
+                        <button class="preset-btn" data-day="266">Fall Equinox</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Display Options</h3>
+                    <label class="checkbox-control">
+                        <input type="checkbox" id="showSolstices" checked>
+                        <span style="color: #ffaa00;">Show solstices</span>
+                    </label>
+                    <label class="checkbox-control">
+                        <input type="checkbox" id="showEquinoxes" checked>
+                        <span style="color: #44ff44;">Show equinoxes</span>
+                    </label>
+                    <label class="checkbox-control">
+                        <input type="checkbox" id="showGrid" checked>
+                        <span>Altitude/Azimuth grid</span>
+                    </label>
+                    <label class="checkbox-control">
+                        <input type="checkbox" id="showHourMarkers" checked>
+                        <span>Hour markers</span>
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <h3>Animation</h3>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Speed</span>
+                            <span class="slider-value" id="speedValue">1x</span>
+                        </div>
+                        <input type="range" id="speedSlider" min="0.5" max="5" step="0.5" value="1">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-primary" id="animateYearBtn">Animate Year</button>
+                        <button class="btn-secondary" id="stopBtn">Stop</button>
+                    </div>
+                </div>
+
+                <a href="index.html" class="nav-link">← Main Simulation</a>
+                <a href="sky.html" class="nav-link">Analemma Sky View →</a>
+            </div>
+
+            <div class="visualization-panel">
+                <div class="panel-title">Daily Sun Path</div>
+                <canvas id="solographCanvas"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffcc00;"></div>
+                        Selected day
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff6b6b;"></div>
+                        Summer solstice
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #6b9fff;"></div>
+                        Winter solstice
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #6bff6b;"></div>
+                        Equinoxes
+                    </div>
+                </div>
+                <div class="info-box">
+                    <div class="info-item">
+                        <label>Sunrise</label>
+                        <span id="sunriseTime">--:--</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Solar Noon</label>
+                        <span id="noonTime">12:00</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Sunset</label>
+                        <span id="sunsetTime">--:--</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Day Length</label>
+                        <span id="dayLength">--:--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="solograph.js"></script>
+</body>
+</html>
