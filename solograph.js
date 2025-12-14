@@ -470,8 +470,9 @@ class Solograph {
             ctx.font = '10px sans-serif';
             ctx.textAlign = 'center';
 
+            const eot = this.getEquationOfTime(day);
             for (let hour = 5; hour <= 20; hour++) {
-                const hourAngle = hour - 12;
+                const hourAngle = (hour + eot) - 12; // Include equation of time
                 const declination = this.getDeclination(day);
                 const pos = this.equatorialToHorizontal(hourAngle, declination, this.latitude);
 
