@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analemma in the Sky</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a0a2e 50%, #0d0d0d 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        header {
+            text-align: center;
+            padding: 15px 0;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255, 200, 100, 0.3);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #888;
+            font-weight: 300;
+        }
+
+        .app-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 900px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .controls-panel {
+            background: rgba(20, 20, 40, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            height: fit-content;
+        }
+
+        .visualization-panel {
+            background: rgba(20, 20, 40, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #888;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #ffa500;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #ffa500;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 6px;
+        }
+
+        #skyCanvas {
+            background: linear-gradient(to bottom, #000022 0%, #001144 40%, #003366 70%, #2d5a7b 100%);
+        }
+
+        .control-group {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-group h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #aaa;
+            margin-bottom: 12px;
+        }
+
+        .slider-control {
+            margin-bottom: 14px;
+        }
+
+        .slider-control:last-child {
+            margin-bottom: 0;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .slider-label {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+
+        .slider-value {
+            font-size: 0.75rem;
+            color: #ffa500;
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: rgba(255, 165, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            cursor: pointer;
+            border: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ffa500, #ff6b00);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 15px rgba(255, 165, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .time-display {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .time-display .time {
+            font-size: 2rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+            color: #ffa500;
+            text-shadow: 0 0 20px rgba(255, 165, 0, 0.5);
+        }
+
+        .time-display .label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 5px;
+        }
+
+        .info-text {
+            font-size: 0.8rem;
+            color: #aaa;
+            line-height: 1.5;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 2px solid #ffa500;
+        }
+
+        .nav-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            color: #888;
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffa500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ANALEMMA IN THE SKY</h1>
+            <p class="subtitle">Watch the Sun's figure-8 path sweep across the sky throughout the day</p>
+        </header>
+
+        <div class="app-layout">
+            <div class="controls-panel">
+                <div class="time-display">
+                    <div class="time" id="timeDisplay">12:00</div>
+                    <div class="label">Local Solar Time</div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Time of Day</h3>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Hour</span>
+                            <span class="slider-value" id="hourValue">12:00</span>
+                        </div>
+                        <input type="range" id="hourSlider" min="4" max="20" step="0.1" value="12">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-primary" id="animateBtn">Animate Day</button>
+                        <button class="btn-secondary" id="stopBtn">Stop</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Location</h3>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Latitude</span>
+                            <span class="slider-value" id="latitudeValue">40°N</span>
+                        </div>
+                        <input type="range" id="latitudeSlider" min="-60" max="60" step="1" value="40">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Display</h3>
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <span class="slider-label">Animation Speed</span>
+                            <span class="slider-value" id="speedValue">1x</span>
+                        </div>
+                        <input type="range" id="speedSlider" min="0.5" max="5" step="0.5" value="1">
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 6px; margin: 8px 0; cursor: pointer; font-size: 0.8rem;">
+                        <input type="checkbox" id="showGrid" checked style="width: 14px; height: 14px;">
+                        <span>Show altitude/azimuth grid</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; margin: 8px 0; cursor: pointer; font-size: 0.8rem;">
+                        <input type="checkbox" id="showLabels" checked style="width: 14px; height: 14px;">
+                        <span>Show month labels</span>
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <div class="info-text">
+                        The analemma appears at a different position in the sky depending on the time of day.
+                        At noon it's highest; in morning/evening it's lower and shifted east/west.
+                    </div>
+                </div>
+
+                <a href="index.html" class="nav-link">← Back to Main Simulation</a>
+            </div>
+
+            <div class="visualization-panel">
+                <div class="panel-title">Sky View (Looking South)</div>
+                <canvas id="skyCanvas" width="900" height="600"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="sky.js"></script>
+</body>
+</html>
