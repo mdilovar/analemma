@@ -1,5 +1,7 @@
 # Analemma Simulation
 
+> **Disclaimer**: This is a casual on/off hobby project made out of curiosity. It likely contains inaccuracies and bugs. Do not rely on it for any scientific, educational, or practical purposes.
+
 An interactive visualization that helps build intuition about why the analemma - the figure-8 pattern traced by the Sun in the sky - has its characteristic shape.
 
 ## What is the Analemma?
