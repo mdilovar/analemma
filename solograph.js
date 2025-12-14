@@ -18,12 +18,36 @@ class Solograph {
         this.isAnimating = false;
         this.animationId = null;
 
+        // Hour trace paths (analemma for each hour)
+        this.showHourTraces = true;
+        this.hourTraces = {}; // Store traced points for each hour
+        this.traceStartDay = 1;
+
         // Fixed orbital parameters
         this.tilt = 23.44;
 
+        this.initializeHourTraces();
         this.setupCanvas();
         this.setupControls();
         this.draw();
+    }
+
+    initializeHourTraces() {
+        // Pre-calculate full analemma paths for each hour
+        this.hourTraces = {};
+        for (let hour = 5; hour <= 19; hour++) {
+            this.hourTraces[hour] = [];
+            for (let day = 1; day <= 365; day++) {
+                const declination = this.getDeclination(day);
+                const hourAngle = hour - 12;
+                const pos = this.equatorialToHorizontal(hourAngle, declination, this.latitude);
+                this.hourTraces[hour].push({
+                    day,
+                    altitude: pos.altitude,
+                    azimuth: pos.azimuth
+                });
+            }
+        }
     }
 
     setupCanvas() {
@@ -50,6 +74,7 @@ class Solograph {
             this.latitude = parseFloat(e.target.value);
             const dir = this.latitude >= 0 ? 'N' : 'S';
             latitudeValue.textContent = `${Math.abs(this.latitude)}°${dir}`;
+            this.initializeHourTraces(); // Recalculate traces for new latitude
             this.draw();
         });
 
@@ -91,6 +116,11 @@ class Solograph {
 
         document.getElementById('showHourMarkers').addEventListener('change', (e) => {
             this.showHourMarkers = e.target.checked;
+            this.draw();
+        });
+
+        document.getElementById('showHourTraces').addEventListener('change', (e) => {
+            this.showHourTraces = e.target.checked;
             this.draw();
         });
 
@@ -311,6 +341,81 @@ class Solograph {
         ctx.textAlign = 'left';
     }
 
+    drawHourTraces() {
+        if (!this.showHourTraces) return;
+
+        const ctx = this.ctx;
+        const currentDay = Math.floor(this.dayOfYear);
+
+        // Color palette for different hours
+        const getHourColor = (hour) => {
+            // Morning hours: blue to cyan
+            // Noon: yellow
+            // Afternoon: orange to red
+            if (hour < 12) {
+                const t = (hour - 5) / 7;
+                return `hsla(${200 - t * 40}, 80%, 60%, 0.7)`;
+            } else if (hour === 12) {
+                return 'hsla(45, 100%, 60%, 0.8)';
+            } else {
+                const t = (hour - 12) / 7;
+                return `hsla(${40 - t * 40}, 80%, 60%, 0.7)`;
+            }
+        };
+
+        // Draw each hour's analemma trace
+        for (let hour = 5; hour <= 19; hour++) {
+            const trace = this.hourTraces[hour];
+            if (!trace || trace.length === 0) continue;
+
+            const color = getHourColor(hour);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+
+            let started = false;
+            let prevAboveHorizon = false;
+
+            // Draw the full analemma for this hour
+            for (let i = 0; i < trace.length; i++) {
+                const point = trace[i];
+                if (point.altitude > 0) {
+                    const pos = this.skyToCanvas(point.altitude, point.azimuth);
+
+                    if (!started || !prevAboveHorizon) {
+                        ctx.moveTo(pos.x, pos.y);
+                        started = true;
+                    } else {
+                        ctx.lineTo(pos.x, pos.y);
+                    }
+                    prevAboveHorizon = true;
+                } else {
+                    prevAboveHorizon = false;
+                }
+            }
+            ctx.stroke();
+
+            // Draw hour label at the current day's position
+            const currentPoint = trace[currentDay - 1];
+            if (currentPoint && currentPoint.altitude > 5) {
+                const labelPos = this.skyToCanvas(currentPoint.altitude, currentPoint.azimuth);
+
+                // Small dot at current position
+                ctx.beginPath();
+                ctx.arc(labelPos.x, labelPos.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Hour label
+                ctx.font = 'bold 9px sans-serif';
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${hour}h`, labelPos.x, labelPos.y - 8);
+            }
+        }
+        ctx.textAlign = 'left';
+    }
+
     drawSunPath(day, color, lineWidth, drawMarkers = false) {
         const ctx = this.ctx;
         const path = this.getSunPath(day);
@@ -420,6 +525,9 @@ class Solograph {
     draw() {
         this.drawBackground();
         this.drawGrid();
+
+        // Draw hour traces (analemmas for each hour)
+        this.drawHourTraces();
 
         // Draw reference paths (solstices and equinoxes)
         if (this.showEquinoxes) {
